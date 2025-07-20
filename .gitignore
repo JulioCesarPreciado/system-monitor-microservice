@@ -1,0 +1,54 @@
+# Archivos compilados
+*.o
+*.a
+*.so
+*.dylib
+
+# Ejecutables
+system_monitor
+client_test
+
+# Archivos de debug
+*.dSYM/
+*.su
+*.idb
+*.pdb
+
+# Directorios de build
+build/
+dist/
+bin/
+
+# Archivos del sistema
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Logs
+*.log
+
+# Archivos temporales
+*.tmp
+*.temp
+*.bak
+
+# Paquetes de distribución
+*.tar.gz
+*.zip
+
+# Archivos de core dump
+core.*
+
+# Archivos de Valgrind
+vgcore.*
