@@ -127,7 +127,13 @@ curl http://localhost:8080
 4. Push al branch (`git push origin feature/nueva-funcionalidad`)
 5. Abre un Pull Request
 
-## 📄 Licencia
+## � Documentación Adicional
+
+- 📖 **[TECHNICAL_DOCS.md](TECHNICAL_DOCS.md)** - Documentación técnica detallada y guía de desarrollo
+- 🧪 **[EXAMPLES.md](EXAMPLES.md)** - Ejemplos avanzados de uso e integración
+- ⚙️ **[Makefile](Makefile)** - Ver `make help` para todos los comandos disponibles
+
+## �📄 Licencia
 
 Este proyecto está bajo la [Licencia MIT](LICENSE).
 

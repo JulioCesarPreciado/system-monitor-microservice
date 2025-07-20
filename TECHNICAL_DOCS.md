@@ -1,4 +1,8 @@
-# 🖥️ Sistema de Monitoreo - Microservicio en C
+# � Documentación Técnica Detallada
+
+> **Nota**: Este archivo contiene documentación técnica profunda. Para una introducción rápida, consulta [README.md](README.md).
+
+# �🖥️ Sistema de Monitoreo - Microservicio en C
 
 Un microservicio desarrollado en C que proporciona información detallada sobre el hardware y estado del sistema a través de un servidor HTTP usando sockets TCP.
 
