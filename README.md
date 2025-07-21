@@ -222,6 +222,28 @@ curl http://prod-server:8080/processes/top
 - **Eficiente**: Uso de APIs nativas del sistema
 - **Extensible**: Fácil agregar nuevas métricas
 
+## 📋 Mantenimiento de Versiones
+
+### Release Notes
+Este proyecto mantiene un archivo único [RELEASE_NOTES.md](RELEASE_NOTES.md) con el historial completo de versiones. Para agregar una nueva versión:
+
+```bash
+# Usar el script automatizado
+./update_release_notes.sh v1.2.0 "Descripción de la nueva versión"
+
+# Editar el archivo para agregar detalles específicos
+# Hacer commit y crear release
+git add RELEASE_NOTES.md
+git commit -m "docs: Update release notes for v1.2.0"
+gh release create v1.2.0 --notes-file RELEASE_NOTES.md
+```
+
+### Versionado
+Seguimos [Semantic Versioning](https://semver.org/):
+- **MAJOR** (v2.0.0): Cambios incompatibles en la API
+- **MINOR** (v1.1.0): Nuevas funcionalidades compatibles
+- **PATCH** (v1.0.1): Correcciones de bugs
+
 ## 🤝 Contribuciones
 
 ¡Las contribuciones son bienvenidas! Por favor:
