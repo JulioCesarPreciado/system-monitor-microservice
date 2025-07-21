@@ -4,6 +4,7 @@
 [![Platform](https://img.shields.io/badge/Platform-macOS%20%7C%20Linux-blue.svg)]()
 [![C99](https://img.shields.io/badge/C-99-blue.svg)]()
 [![Build Status](https://img.shields.io/badge/Build-Passing-green.svg)]()
+[![Version](https://img.shields.io/badge/Version-1.1.0-blue.svg)]()
 
 🖥️ **Microservicio HTTP desarrollado en C** que proporciona métricas del sistema en tiempo real usando sockets TCP con detección automática de sistema operativo.
 
@@ -11,11 +12,28 @@
 
 - 🔍 **Detección automática de SO** (macOS/Linux)
 - 📊 **Métricas en tiempo real**: CPU, RAM, Disco, Procesos, Red
+- 🚀 **NUEVO: Análisis de procesos top** - Ideal para servidores remotos
 - 🏗️ **Arquitectura modular** profesional
-- 🚀 **APIs nativas** para máximo rendimiento
-- 🌐 **Servidor HTTP** con sockets TCP
+- ⚡ **APIs nativas** para máximo rendimiento
+- 🌐 **Servidor HTTP** con múltiples endpoints
+- 🔧 **CLI flags** para análisis directo
 - 🧪 **Cliente de pruebas** incluido
 - ⚙️ **Build system** avanzado
+
+## 🆕 Nuevas Funcionalidades v1.1.0
+
+### 🔥 Análisis de Procesos Top
+- **Top 10 procesos por CPU**: Identifica procesos que más consumen CPU
+- **Top 10 procesos por memoria**: Encuentra memory leaks y procesos pesados  
+- **Top 10 procesos por disco**: Analiza actividad I/O en tiempo real
+- **Análisis remoto**: Perfecto para monitoreo de servidores via SSH
+- **Endpoint HTTP**: `/processes/top` para integración con dashboards
+
+### 🚀 Casos de Uso
+- **Análisis de servidores remotos**: `ssh server './system_monitor --processes'`
+- **Monitoreo automático**: APIs HTTP para dashboards
+- **Troubleshooting**: Identificar procesos problemáticos rápidamente
+- **Optimización**: Detectar cuellos de botella en producción
 
 ## 🚀 Instalación Rápida
 
@@ -63,11 +81,70 @@ make
 }
 ```
 
+## 🆕 Ejemplo de Análisis de Procesos (v1.1.0)
+
+### Análisis Directo via CLI
+```bash
+# Análisis local
+./system_monitor --processes
+
+# Análisis remoto via SSH
+ssh usuario@servidor './system_monitor --processes'
+
+# Usando el script automatizado
+./remote_analysis.sh servidor.example.com admin 22
+```
+
+### Análisis via HTTP API
+```bash
+# Iniciar servidor
+./system_monitor &
+
+# Obtener análisis de procesos top
+curl http://localhost:8080/processes/top | jq
+
+# Respuesta ejemplo (resumida):
+{
+  "timestamp": "Sun Jul 20 18:32:52 2025",
+  "platform": "macOS", 
+  "analysis": {
+    "top_cpu_processes": [
+      {
+        "pid": 312,
+        "name": "/System/Library/CoreServices/powerd.bundle/powerd",
+        "user": "root",
+        "cpu_usage": "0.4%"
+      }
+      // ... 9 procesos más
+    ],
+    "top_memory_processes": [
+      {
+        "pid": 299,
+        "name": "/usr/libexec/logd", 
+        "user": "root",
+        "memory_usage": "42.2MB"
+      }
+      // ... 9 procesos más  
+    ],
+    "top_disk_processes": [
+      // Procesos con mayor actividad I/O
+    ]
+  },
+  "summary": {
+    "total_analyzed_processes": 30,
+    "platform_capabilities": "Basic process analysis available"
+  }
+}
+
+# Obtener ayuda de la API
+curl http://localhost:8080/help | jq
+```
+
 ## 🛠️ Comandos Disponibles
 
 ```bash
 make              # Compilar todo
-make run          # Ejecutar servidor
+make run          # Ejecutar servidor  
 make test         # Pruebas básicas
 make clean        # Limpiar archivos
 make help         # Ver todas las opciones
@@ -77,29 +154,57 @@ make help         # Ver todas las opciones
 
 ```
 system-monitor-microservice/
-├── include/      # Headers (.h)
-├── src/          # Código principal
-├── utils/        # Utilidades
-├── main.c        # Punto de entrada
-└── Makefile      # Build system
+├── include/              # Headers (.h)
+│   ├── system_info.h    # Estructuras y funciones de sistema
+│   ├── server.h         # Servidor HTTP
+│   └── platform.h       # Detección de plataforma
+├── src/                 # Código principal
+│   ├── system_info.c    # Recolección de métricas y procesos
+│   └── server.c         # Servidor HTTP con múltiples endpoints
+├── utils/               # Utilidades
+│   └── platform.c       # Detección automática de SO
+├── main.c               # Punto de entrada con nuevos flags
+├── remote_analysis.sh   # Script para análisis remoto
+└── Makefile             # Build system avanzado
 ```
 
 ## 🎯 Uso
 
-### Como Microservicio
+### 🚀 Como Microservicio HTTP
 ```bash
+# Iniciar servidor
 ./system_monitor
-curl http://localhost:8080
+
+# Endpoints disponibles:
+curl http://localhost:8080/                 # Métricas básicas
+curl http://localhost:8080/processes/top    # Análisis de procesos ⭐ NUEVO
+curl http://localhost:8080/help             # Documentación API
 ```
 
-### Con Cliente Personalizado
+### 🔧 Análisis Directo (CLI)
+```bash
+./system_monitor --help        # Ayuda completa
+./system_monitor --version     # Información de versión
+./system_monitor --platform    # Info de plataforma
+./system_monitor --processes   # Análisis de procesos top ⭐ NUEVO
+```
+
+### 🌐 Análisis Remoto de Servidores
+```bash
+# Método 1: SSH directo
+ssh admin@prod-server './system_monitor --processes'
+
+# Método 2: Script automatizado  
+./remote_analysis.sh prod-server admin 2222
+
+# Método 3: API HTTP remota
+ssh admin@prod-server './system_monitor &'
+curl http://prod-server:8080/processes/top
+```
+
+### 🧪 Con Cliente Personalizado
 ```bash
 ./client_test
-```
-
-### Opciones del Programa
-```bash
-./system_monitor --help      # Ayuda
 ./system_monitor --version   # Versión
 ./system_monitor --platform  # Info del SO
 ```

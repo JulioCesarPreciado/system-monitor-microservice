@@ -101,26 +101,103 @@ void send_error_response(int client_socket, int error_code, const char *message)
 // Función para manejar las conexiones de clientes
 void handle_client(int client_socket) {
     char buffer[BUFFER_SIZE];
-    SystemInfo info;
     char response[MAX_RESPONSE];
     
-    // Leer la petición del cliente (opcional, para logging)
-    ssize_t bytes_read = recv(client_socket, buffer, BUFFER_SIZE - 1, MSG_DONTWAIT);
-    if (bytes_read > 0) {
-        buffer[bytes_read] = '\0';
-        // Podrías procesar diferentes endpoints aquí en el futuro
+    // Leer la petición HTTP del cliente con un timeout adecuado
+    ssize_t bytes_read = recv(client_socket, buffer, BUFFER_SIZE - 1, 0); // Cambiar a bloqueante
+    if (bytes_read <= 0) {
+        // Si no se puede leer, enviar métricas básicas por defecto
+        SystemInfo info;
+        collect_system_info(&info);
+        format_json_response(&info, response, MAX_RESPONSE);
+        send_http_response(client_socket, response);
+        close(client_socket);
+        return;
     }
     
-    // Recopilar información del sistema
-    collect_system_info(&info);
+    buffer[bytes_read] = '\0';
     
-    // Formatear respuesta JSON
-    format_json_response(&info, response, MAX_RESPONSE);
+    // Parsear la línea de petición HTTP para determinar el endpoint
+    char method[16], path[256], version[16];
+    if (sscanf(buffer, "%15s %255s %15s", method, path, version) != 3) {
+        send_error_response(client_socket, 400, "Bad Request");
+        close(client_socket);
+        return;
+    }
     
-    // Enviar respuesta HTTP
-    send_http_response(client_socket, response);
+    printf("🔍 Request: %s %s\n", method, path);  // Debug temporal
     
-    // Cerrar conexión
+    // Determinar qué endpoint se está solicitando
+    if (strcmp(path, "/") == 0 || strcmp(path, "/metrics") == 0) {
+        // Endpoint principal - métricas del sistema
+        SystemInfo info;
+        collect_system_info(&info);
+        format_json_response(&info, response, MAX_RESPONSE);
+        send_http_response(client_socket, response);
+        
+    } else if (strcmp(path, "/processes/top") == 0) {
+        // Nuevo endpoint - análisis de procesos top
+        TopProcesses top;
+        get_top_processes(&top);
+        format_processes_json_response(&top, response, MAX_RESPONSE);
+        send_http_response(client_socket, response);
+        
+    } else if (strstr(path, "/help") != NULL || strstr(path, "/api") != NULL) {
+        // Endpoint de ayuda/documentación de API
+        snprintf(response, MAX_RESPONSE,
+            "{\n"
+            "  \"api_version\": \"1.1.0\",\n"
+            "  \"platform\": \"%s\",\n"
+            "  \"endpoints\": {\n"
+            "    \"/\": {\n"
+            "      \"description\": \"System metrics (CPU, RAM, Disk, Network)\",\n"
+            "      \"method\": \"GET\"\n"
+            "    },\n"
+            "    \"/metrics\": {\n"
+            "      \"description\": \"Alias for main endpoint\",\n"
+            "      \"method\": \"GET\"\n"
+            "    },\n"
+            "    \"/processes/top\": {\n"
+            "      \"description\": \"Top 10 processes by CPU, Memory and Disk usage\",\n"
+            "      \"method\": \"GET\",\n"
+            "      \"note\": \"Perfect for server analysis\"\n"
+            "    },\n"
+            "    \"/help\": {\n"
+            "      \"description\": \"This help information\",\n"
+            "      \"method\": \"GET\"\n"
+            "    }\n"
+            "  },\n"
+            "  \"usage_examples\": {\n"
+            "    \"basic_metrics\": \"curl http://localhost:%d/\",\n"
+            "    \"process_analysis\": \"curl http://localhost:%d/processes/top\",\n"
+            "    \"help_info\": \"curl http://localhost:%d/help\"\n"
+            "  }\n"
+            "}", 
+            get_platform_name(), PORT, PORT, PORT);
+        send_http_response(client_socket, response);
+        
+    } else {
+        // Endpoint no encontrado
+        snprintf(response, MAX_RESPONSE,
+            "{\n"
+            "  \"error\": 404,\n"
+            "  \"message\": \"Endpoint not found: %s\",\n"
+            "  \"available_endpoints\": [\"/\", \"/metrics\", \"/processes/top\", \"/help\"],\n"
+            "  \"platform\": \"%s\"\n"
+            "}", path, get_platform_name());
+        
+        char http_response[MAX_RESPONSE + 256];
+        snprintf(http_response, sizeof(http_response),
+            "HTTP/1.1 404 Not Found\r\n"
+            "Content-Type: application/json\r\n"
+            "Content-Length: %lu\r\n"
+            "Access-Control-Allow-Origin: *\r\n"
+            "\r\n"
+            "%s", strlen(response), response);
+        
+        send(client_socket, http_response, strlen(http_response), 0);
+    }
+    
     close(client_socket);
 }
 

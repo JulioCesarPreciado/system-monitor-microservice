@@ -5,6 +5,7 @@
 #include <string.h>
 #include "include/server.h"
 #include "include/platform.h"
+#include "include/system_info.h"
 
 // Variable global para manejar el cierre graceful
 volatile sig_atomic_t server_running = 1;
@@ -24,23 +25,30 @@ void print_help(const char *program_name) {
     printf("═════════════════════════════════════════════\n\n");
     printf("Uso: %s [opciones]\n\n", program_name);
     printf("Opciones:\n");
-    printf("  -h, --help     Mostrar esta ayuda\n");
-    printf("  -v, --version  Mostrar versión del programa\n");
-    printf("  -p, --platform Mostrar información de la plataforma\n\n");
+    printf("  -h, --help      Mostrar esta ayuda\n");
+    printf("  -v, --version   Mostrar versión del programa\n");
+    printf("  -p, --platform  Mostrar información de la plataforma\n");
+    printf("  --processes     Mostrar análisis de procesos top y salir\n\n");
     printf("Ejemplos:\n");
-    printf("  %s               # Iniciar el servidor\n", program_name);
-    printf("  %s --platform    # Ver información de la plataforma\n", program_name);
+    printf("  %s                 # Iniciar el servidor\n", program_name);
+    printf("  %s --platform      # Ver información de la plataforma\n", program_name);
+    printf("  %s --processes     # Análisis de procesos (ideal para servidores remotos)\n", program_name);
     printf("\nUna vez iniciado el servidor:\n");
-    printf("  curl http://localhost:%d           # Obtener métricas\n", PORT);
-    printf("  curl -s http://localhost:%d | jq   # Con formato JSON\n", PORT);
+    printf("  curl http://localhost:%d                     # Obtener métricas básicas\n", PORT);
+    printf("  curl http://localhost:%d/processes/top       # Análisis de procesos\n", PORT);
+    printf("  curl http://localhost:%d/help                # Documentación de API\n", PORT);
+    printf("  curl -s http://localhost:%d | jq             # Con formato JSON\n", PORT);
     printf("\n🌐 Acceder desde navegador: http://localhost:%d\n", PORT);
+    printf("\n🔍 Para análisis remoto de servidores:\n");
+    printf("  ssh user@servidor '%s --processes'        # Análisis remoto directo\n", program_name);
 }
 
 // Función para mostrar versión
 void print_version(void) {
-    printf("Sistema de Monitoreo v1.0.0\n");
+    printf("Sistema de Monitoreo v1.1.0\n");
     printf("Plataforma: %s\n", get_platform_name());
     printf("Puerto: %d\n", PORT);
+    printf("Nuevas características: Análisis de procesos top\n");
     printf("Compilado: %s %s\n", __DATE__, __TIME__);
 }
 
@@ -83,6 +91,14 @@ int main(int argc, char *argv[]) {
             return 0;
         } else if (strcmp(argv[1], "-p") == 0 || strcmp(argv[1], "--platform") == 0) {
             print_platform_details();
+            return 0;
+        } else if (strcmp(argv[1], "--processes") == 0) {
+            // Nuevo flag para análisis de procesos
+            printf("🔍 ANÁLISIS DE PROCESOS REMOTOS\n");
+            printf("════════════════════════════════\n");
+            TopProcesses top;
+            get_top_processes(&top);
+            display_top_processes(&top);
             return 0;
         } else {
             printf("❌ Opción desconocida: %s\n", argv[1]);

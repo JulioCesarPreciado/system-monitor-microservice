@@ -347,3 +347,275 @@ void format_json_response(SystemInfo *info, char *response, int max_size) {
         info->public_ip, info->network_status
     );
 }
+
+// Función para obtener los top 10 procesos por CPU (multiplataforma)
+void get_top_processes_cpu(ProcessInfo *processes, int *count) {
+    FILE *fp = NULL;
+    *count = 0;
+    
+    if (is_macos()) {
+        // macOS: usar ps con ordenamiento por CPU
+        fp = popen("ps -axo pid,user,pcpu,comm | head -11 | tail -10", "r");
+    } else if (is_linux()) {
+        // Linux: usar ps con ordenamiento por CPU
+        fp = popen("ps -axo pid,user,pcpu,comm --sort=-pcpu | head -11 | tail -10", "r");
+    }
+    
+    if (fp == NULL) {
+        return;
+    }
+    
+    char line[512];
+    int i = 0;
+    
+    while (fgets(line, sizeof(line), fp) && i < 10) {
+        int pid;
+        char user[64], cpu[16], name[256];
+        
+        if (sscanf(line, "%d %63s %15s %255s", &pid, user, cpu, name) == 4) {
+            processes[i].pid = pid;
+            strncpy(processes[i].name, name, sizeof(processes[i].name) - 1);
+            strncpy(processes[i].cpu_usage, cpu, sizeof(processes[i].cpu_usage) - 1);
+            strncpy(processes[i].user, user, sizeof(processes[i].user) - 1);
+            strcpy(processes[i].memory_usage, "N/A");
+            strcpy(processes[i].disk_usage, "N/A");
+            
+            processes[i].name[sizeof(processes[i].name) - 1] = '\0';
+            processes[i].cpu_usage[sizeof(processes[i].cpu_usage) - 1] = '\0';
+            processes[i].user[sizeof(processes[i].user) - 1] = '\0';
+            
+            i++;
+        }
+    }
+    
+    *count = i;
+    pclose(fp);
+}
+
+// Función para obtener los top 10 procesos por memoria (multiplataforma)
+void get_top_processes_memory(ProcessInfo *processes, int *count) {
+    FILE *fp = NULL;
+    *count = 0;
+    
+    if (is_macos()) {
+        // macOS: usar ps con ordenamiento por memoria
+        fp = popen("ps -axo pid,user,pmem,rss,comm | head -11 | tail -10", "r");
+    } else if (is_linux()) {
+        // Linux: usar ps con ordenamiento por memoria
+        fp = popen("ps -axo pid,user,pmem,rss,comm --sort=-pmem | head -11 | tail -10", "r");
+    }
+    
+    if (fp == NULL) {
+        return;
+    }
+    
+    char line[512];
+    int i = 0;
+    
+    while (fgets(line, sizeof(line), fp) && i < 10) {
+        int pid, rss;
+        char user[64], mem[16], name[256];
+        
+        if (sscanf(line, "%d %63s %15s %d %255s", &pid, user, mem, &rss, name) == 5) {
+            processes[i].pid = pid;
+            strncpy(processes[i].name, name, sizeof(processes[i].name) - 1);
+            snprintf(processes[i].memory_usage, sizeof(processes[i].memory_usage), "%.1fMB", rss / 1024.0);
+            strncpy(processes[i].user, user, sizeof(processes[i].user) - 1);
+            strcpy(processes[i].cpu_usage, "N/A");
+            strcpy(processes[i].disk_usage, "N/A");
+            
+            processes[i].name[sizeof(processes[i].name) - 1] = '\0';
+            processes[i].user[sizeof(processes[i].user) - 1] = '\0';
+            
+            i++;
+        }
+    }
+    
+    *count = i;
+    pclose(fp);
+}
+
+// Función para obtener los top 10 procesos por I/O de disco (multiplataforma)
+void get_top_processes_disk(ProcessInfo *processes, int *count) {
+    FILE *fp = NULL;
+    *count = 0;
+    
+    if (is_macos()) {
+        // macOS: usar iotop o ps (limitado)
+        fp = popen("ps -axo pid,user,comm | head -11 | tail -10", "r");
+    } else if (is_linux()) {
+        // Linux: intentar usar iotop, fallback a ps
+        fp = popen("which iotop > /dev/null 2>&1 && iotop -b -n 1 -P -o | head -10 || ps -axo pid,user,comm | head -11 | tail -10", "r");
+    }
+    
+    if (fp == NULL) {
+        return;
+    }
+    
+    char line[512];
+    int i = 0;
+    
+    while (fgets(line, sizeof(line), fp) && i < 10) {
+        int pid;
+        char user[64], name[256];
+        
+        // Formato básico cuando no hay iotop disponible
+        if (sscanf(line, "%d %63s %255s", &pid, user, name) == 3) {
+            processes[i].pid = pid;
+            strncpy(processes[i].name, name, sizeof(processes[i].name) - 1);
+            strncpy(processes[i].user, user, sizeof(processes[i].user) - 1);
+            strcpy(processes[i].cpu_usage, "N/A");
+            strcpy(processes[i].memory_usage, "N/A");
+            strcpy(processes[i].disk_usage, "Limited");
+            
+            processes[i].name[sizeof(processes[i].name) - 1] = '\0';
+            processes[i].user[sizeof(processes[i].user) - 1] = '\0';
+            
+            i++;
+        }
+    }
+    
+    *count = i;
+    pclose(fp);
+}
+
+// Función principal para obtener todos los top processes
+void get_top_processes(TopProcesses *top) {
+    get_top_processes_cpu(top->top_cpu, &top->cpu_count);
+    get_top_processes_memory(top->top_memory, &top->memory_count);
+    get_top_processes_disk(top->top_disk, &top->disk_count);
+}
+
+// Función para formatear la respuesta JSON de procesos
+void format_processes_json_response(TopProcesses *top, char *response, int max_size) {
+    time_t now = time(NULL);
+    char *timestamp = ctime(&now);
+    timestamp[strcspn(timestamp, "\n")] = 0;
+    
+    int offset = 0;
+    
+    // Cabecera JSON
+    offset += snprintf(response + offset, max_size - offset,
+        "{\n"
+        "  \"timestamp\": \"%s\",\n"
+        "  \"platform\": \"%s\",\n"
+        "  \"analysis\": {\n"
+        "    \"top_cpu_processes\": [\n", 
+        timestamp, get_platform_name());
+    
+    // Top procesos por CPU
+    for (int i = 0; i < top->cpu_count && offset < max_size - 200; i++) {
+        offset += snprintf(response + offset, max_size - offset,
+            "      {\n"
+            "        \"pid\": %d,\n"
+            "        \"name\": \"%s\",\n"
+            "        \"user\": \"%s\",\n"
+            "        \"cpu_usage\": \"%s%%\"\n"
+            "      }%s\n",
+            top->top_cpu[i].pid,
+            top->top_cpu[i].name,
+            top->top_cpu[i].user,
+            top->top_cpu[i].cpu_usage,
+            (i < top->cpu_count - 1) ? "," : "");
+    }
+    
+    offset += snprintf(response + offset, max_size - offset,
+        "    ],\n"
+        "    \"top_memory_processes\": [\n");
+    
+    // Top procesos por memoria
+    for (int i = 0; i < top->memory_count && offset < max_size - 200; i++) {
+        offset += snprintf(response + offset, max_size - offset,
+            "      {\n"
+            "        \"pid\": %d,\n"
+            "        \"name\": \"%s\",\n"
+            "        \"user\": \"%s\",\n"
+            "        \"memory_usage\": \"%s\"\n"
+            "      }%s\n",
+            top->top_memory[i].pid,
+            top->top_memory[i].name,
+            top->top_memory[i].user,
+            top->top_memory[i].memory_usage,
+            (i < top->memory_count - 1) ? "," : "");
+    }
+    
+    offset += snprintf(response + offset, max_size - offset,
+        "    ],\n"
+        "    \"top_disk_processes\": [\n");
+    
+    // Top procesos por disco
+    for (int i = 0; i < top->disk_count && offset < max_size - 200; i++) {
+        offset += snprintf(response + offset, max_size - offset,
+            "      {\n"
+            "        \"pid\": %d,\n"
+            "        \"name\": \"%s\",\n"
+            "        \"user\": \"%s\",\n"
+            "        \"disk_status\": \"%s\"\n"
+            "      }%s\n",
+            top->top_disk[i].pid,
+            top->top_disk[i].name,
+            top->top_disk[i].user,
+            top->top_disk[i].disk_usage,
+            (i < top->disk_count - 1) ? "," : "");
+    }
+    
+    // Cierre JSON
+    snprintf(response + offset, max_size - offset,
+        "    ]\n"
+        "  },\n"
+        "  \"summary\": {\n"
+        "    \"total_analyzed_processes\": %d,\n"
+        "    \"platform_capabilities\": \"%s\"\n"
+        "  }\n"
+        "}",
+        top->cpu_count + top->memory_count + top->disk_count,
+        is_linux() ? "Full process analysis available" : "Basic process analysis available");
+}
+
+// Función para mostrar los top processes en consola
+void display_top_processes(TopProcesses *top) {
+    printf("\n🔍 TOP PROCESSES ANALYSIS - %s\n", get_platform_name());
+    printf("=" "=" "=" "=" "=" "=" "=" "=" "=" "=" "=" "=" "=" "=" "=" "=" "=" "=" "=" "=" "=" "=" "=" "=" "=" "=" "=" "=" "=" "=" "=" "=" "=" "=" "=" "=" "=" "=" "=" "=" "\n");
+    
+    // Top CPU
+    printf("\n🚀 TOP 10 PROCESSES BY CPU USAGE:\n");
+    printf("%-8s %-15s %-8s %s\n", "PID", "USER", "CPU%", "PROCESS NAME");
+    printf("-" "-" "-" "-" "-" "-" "-" "-" "-" "-" "-" "-" "-" "-" "-" "-" "-" "-" "-" "-" "-" "-" "-" "-" "-" "-" "-" "-" "-" "-" "-" "-" "-" "-" "-" "-" "-" "-" "-" "-" "-" "-" "-" "-" "-" "-" "-" "-" "-" "\n");
+    
+    for (int i = 0; i < top->cpu_count; i++) {
+        printf("%-8d %-15s %-8s %s\n",
+            top->top_cpu[i].pid,
+            top->top_cpu[i].user,
+            top->top_cpu[i].cpu_usage,
+            top->top_cpu[i].name);
+    }
+    
+    // Top Memory
+    printf("\n🧠 TOP 10 PROCESSES BY MEMORY USAGE:\n");
+    printf("%-8s %-15s %-12s %s\n", "PID", "USER", "MEMORY", "PROCESS NAME");
+    printf("-" "-" "-" "-" "-" "-" "-" "-" "-" "-" "-" "-" "-" "-" "-" "-" "-" "-" "-" "-" "-" "-" "-" "-" "-" "-" "-" "-" "-" "-" "-" "-" "-" "-" "-" "-" "-" "-" "-" "-" "-" "-" "-" "-" "-" "-" "-" "-" "-" "\n");
+    
+    for (int i = 0; i < top->memory_count; i++) {
+        printf("%-8d %-15s %-12s %s\n",
+            top->top_memory[i].pid,
+            top->top_memory[i].user,
+            top->top_memory[i].memory_usage,
+            top->top_memory[i].name);
+    }
+    
+    // Top Disk
+    printf("\n💾 TOP 10 PROCESSES BY DISK ACTIVITY:\n");
+    printf("%-8s %-15s %-12s %s\n", "PID", "USER", "DISK I/O", "PROCESS NAME");
+    printf("-" "-" "-" "-" "-" "-" "-" "-" "-" "-" "-" "-" "-" "-" "-" "-" "-" "-" "-" "-" "-" "-" "-" "-" "-" "-" "-" "-" "-" "-" "-" "-" "-" "-" "-" "-" "-" "-" "-" "-" "-" "-" "-" "-" "-" "-" "-" "-" "-" "\n");
+    
+    for (int i = 0; i < top->disk_count; i++) {
+        printf("%-8d %-15s %-12s %s\n",
+            top->top_disk[i].pid,
+            top->top_disk[i].user,
+            top->top_disk[i].disk_usage,
+            top->top_disk[i].name);
+    }
+    
+    printf("\n📊 Analysis completed for %d total processes\n\n",
+        top->cpu_count + top->memory_count + top->disk_count);
+}

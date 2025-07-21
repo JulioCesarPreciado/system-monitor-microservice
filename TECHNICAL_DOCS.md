@@ -1,4 +1,43 @@
-# � Documentación Técnica Detallada
+# 📖 Documentación Técnica Detallada - v1.1.0
+
+> **Nota**: Este archivo contiene documentación técnica profunda. Para una introducción rápida, consulta [README.md](README.md).
+
+# 🖥️ Sistema de Monitoreo - Microservicio en C
+
+Un microservicio avanzado desarrollado en C que proporciona información detallada sobre el hardware y estado del sistema a través de un servidor HTTP usando sockets TCP con análisis avanzado de procesos.
+
+## 🆕 Novedades v1.1.0
+
+### Análisis de Procesos Top
+- **Top 10 procesos por CPU**: Identifica procesos que consumen más CPU
+- **Top 10 procesos por memoria**: Detecta memory leaks y procesos pesados
+- **Top 10 procesos por disco**: Monitorea actividad de I/O en tiempo real
+- **Análisis remoto**: Optimizado para monitoreo de servidores via SSH
+- **API HTTP**: Nuevos endpoints para integración con dashboards
+
+### Nuevas Capacidades
+- **Múltiples endpoints**: `/`, `/processes/top`, `/help`
+- **CLI flags extendidos**: `--processes` para análisis directo
+- **Cross-platform mejorado**: Mejor detección de SO y APIs nativas
+- **Script de análisis remoto**: Automatización para servidores
+
+## 📋 Características
+
+### Hardware Information
+- **CPU**: Modelo del procesador y uso actual
+- **RAM**: Memoria total, usada y disponible  
+- **Disco**: Espacio total, usado y libre
+
+### System Metrics
+- **Procesos**: Número total de procesos activos
+- **Red**: IP del servidor y estado de interfaces de red
+- **Timestamp**: Marca de tiempo de cuando se obtuvo la información
+
+### 🔥 Process Analysis (NUEVO)
+- **Top CPU**: Procesos ordenados por uso de CPU
+- **Top Memory**: Procesos ordenados por uso de memoria
+- **Top Disk**: Procesos con mayor actividad I/O
+- **Detalles**: PID, usuario, porcentajes de uso, nombres completosécnica Detallada
 
 > **Nota**: Este archivo contiene documentación técnica profunda. Para una introducción rápida, consulta [README.md](README.md).
 
