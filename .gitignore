@@ -52,3 +52,12 @@ core.*
 
 # Archivos de Valgrind
 vgcore.*
+
+# Dashboard local - no subir al repo
+dashboard.py
+dashboard_requirements.txt
+start_dashboard.sh
+__pycache__/
+*.pyc
+.streamlit/
+DASHBOARD_README.md
